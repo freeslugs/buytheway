@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Buy the way</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.2/normalize.min.css">
+    <link rel="stylesheet" type="text/css" href="lib/css/ionic.min.css">
+    <link rel="stylesheet" type="text/css" href="lib/css/ionicons.min.css">
+    <link href='http://fonts.googleapis.com/css?family=Roboto:300,400' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="app.css">
+  </head>
+  <body>
+    <div id="main"></div>
+  </body>
+  <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&signed_in=true"></script>
+  <!-- magically toggle between scripts for local server / build -->
+  <script type="text/javascript">
+    var url = document.URL.indexOf("localhost") > -1 ? "http://localhost:8080/app.js" : "dist/app.js";
+    document.write('<' + 'script src="' + url + '" ></script' + '>');
+  </script>
+</html>
