@@ -9,6 +9,9 @@ find restaurants along your route
 ## install
 1. `brew install node`
 1. `npm install --dev`
+- troubles with webpack? 
+  - `npm install webpack -g`
+  - `npm install webpack-dev-server -g`
 
 ## run
 ### local server
@@ -18,6 +21,13 @@ find restaurants along your route
 ### build for prod
 - `webpack`
 - add `--watch` to watch files
+
+#### deploy
+- build for prod
+- `git checkout gh-pages`
+- `git merge master`
+- `git push origin`
+- github auto deploys gh-pages to freeslugs.github.io/buytheway
 
 ## debug
 - google, stackoverflow
