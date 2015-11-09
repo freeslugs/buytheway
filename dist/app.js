@@ -246,26 +246,45 @@
 	    };
 	  }
 
+	  // use yahoo CORS proxy
+
 	  _createClass(SimpleMap, [{
 	    key: "componentDidMount",
 	    value: function componentDidMount() {
+	      var newYork, b, boston, a, data;
 	      return regeneratorRuntime.async(function componentDidMount$(context$2$0) {
 	        while (1) switch (context$2$0.prev = context$2$0.next) {
 	          case 0:
+	            context$2$0.next = 2;
+	            return regeneratorRuntime.awrap(this.geocodePoint("35 colby drive"));
+
+	          case 2:
+	            newYork = context$2$0.sent;
+	            b = newYork.pt.lat() + "," + newYork.pt.lng();
+	            context$2$0.next = 6;
+	            return regeneratorRuntime.awrap(this.geocodePoint("las vegas "));
+
+	          case 6:
+	            boston = context$2$0.sent;
+	            a = boston.pt.lat() + "," + boston.pt.lng();
+	            context$2$0.next = 10;
+	            return regeneratorRuntime.awrap(this.getTravelTime(a, b));
+
+	          case 10:
+	            data = context$2$0.sent;
+
+	            console.log(data);
+
+	          case 12:
 	          case "end":
 	            return context$2$0.stop();
 	        }
 	      }, null, this);
 	    }
-	  }, {
-	    key: "geocodePoint",
-
-	    // var data = await this.geocodePoint("35 colby drive dix hills new york");
-	    // console.log(data.pt.lat())
-	    // console.log(data.pt.lng())
-	    // console.log(data.address)
 
 	    // returns {pt => google pt (obj), address => formatted address (string)}
+	  }, {
+	    key: "geocodePoint",
 	    value: function geocodePoint(query) {
 	      return regeneratorRuntime.async(function geocodePoint$(context$2$0) {
 	        while (1) switch (context$2$0.prev = context$2$0.next) {
@@ -297,6 +316,43 @@
 	    value: function plotMarker() {
 	      console.log("plotMarker");
 	    }
+
+	    // returns travel time by car in seconds
+	  }, {
+	    key: "getTravelTime",
+	    value: function getTravelTime(a, b) {
+	      var url, response, json, data, travelTime;
+	      return regeneratorRuntime.async(function getTravelTime$(context$2$0) {
+	        while (1) switch (context$2$0.prev = context$2$0.next) {
+	          case 0:
+	            url = "http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=" + a + "&wp.1=" + b + "&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2";
+	            context$2$0.prev = 1;
+	            context$2$0.next = 4;
+	            return regeneratorRuntime.awrap(fetch(toYQL(url)));
+
+	          case 4:
+	            response = context$2$0.sent;
+	            context$2$0.next = 7;
+	            return regeneratorRuntime.awrap(response.json());
+
+	          case 7:
+	            json = context$2$0.sent;
+	            data = json.query.results.json;
+	            travelTime = data.resourceSets.resources.travelDurationTraffic;
+	            return context$2$0.abrupt("return", travelTime);
+
+	          case 13:
+	            context$2$0.prev = 13;
+	            context$2$0.t0 = context$2$0["catch"](1);
+
+	            console.log("error fetching directions: " + context$2$0.t0);
+
+	          case 16:
+	          case "end":
+	            return context$2$0.stop();
+	        }
+	      }, null, this, [[1, 13]]);
+	    }
 	  }, {
 	    key: "plotDirections",
 	    value: function plotDirections(origin, destination) {
@@ -315,76 +371,6 @@
 	          console.error("error fetching directions " + JSON.stringify(result));
 	        }
 	      });
-	    }
-	  }, {
-	    key: "test",
-	    value: function test() {
-	      console.log('hello');
-	      var a = "41.8507300,-87.6512600";
-	      var b = "41.8525800,-87.6514100";
-
-	      // avoid cors error
-	      // use yahoo's server as a proxy
-	      function toYQL(url) {
-	        var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=',
-	            query = 'select * from json where url="{url}"'.replace('{url}', url);
-
-	        return yqlUrl + encodeURIComponent(query) + '&format=json';
-	      }
-
-	      var url = 'http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=' + a + '&wp.1=' + b + '&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2';
-
-	      function hello() {
-	        var response, json, data;
-	        return regeneratorRuntime.async(function hello$(context$3$0) {
-	          while (1) switch (context$3$0.prev = context$3$0.next) {
-	            case 0:
-	              context$3$0.prev = 0;
-	              context$3$0.next = 3;
-	              return regeneratorRuntime.awrap(fetch(toYQL(url)));
-
-	            case 3:
-	              response = context$3$0.sent;
-	              context$3$0.next = 6;
-	              return regeneratorRuntime.awrap(response.json());
-
-	            case 6:
-	              json = context$3$0.sent;
-	              data = json.query.results.json;
-	              return context$3$0.abrupt("return", data);
-
-	            case 11:
-	              context$3$0.prev = 11;
-	              context$3$0.t0 = context$3$0["catch"](0);
-
-	              console.log("error fetching directions " + JSON.stringify(context$3$0.t0));
-
-	            case 14:
-	            case "end":
-	              return context$3$0.stop();
-	          }
-	        }, null, this, [[0, 11]]);
-	      }
-
-	      function hellotwo() {
-	        var data;
-	        return regeneratorRuntime.async(function hellotwo$(context$3$0) {
-	          while (1) switch (context$3$0.prev = context$3$0.next) {
-	            case 0:
-	              context$3$0.next = 2;
-	              return regeneratorRuntime.awrap(hello());
-
-	            case 2:
-	              data = context$3$0.sent;
-
-	              console.log(data);
-
-	            case 4:
-	            case "end":
-	              return context$3$0.stop();
-	          }
-	        }, null, this);
-	      }
 	    }
 	  }, {
 	    key: "render",
@@ -418,11 +404,22 @@
 	  return SimpleMap;
 	})(_react.Component);
 
+	function toYQL(url) {
+	  var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=';
+	  var query = "select * from json where url=\"" + url + "\"";
+	  return yqlUrl + encodeURIComponent(query) + '&format=json';
+	}
+
 	_reactDom2["default"].render(_react2["default"].createElement(SimpleMap, null), document.getElementById('main'));
 
+	// var data = await this.geocodePoint("35 colby drive dix hills new york");
+	// console.log(data.pt.lat())
+	// console.log(data.pt.lng())
+	// console.log(data.address)
+	// var a = "41.8507300,-87.6512600";
+	// var b = "41.8525800,-87.6514100";
+
 	// promisify geocoder fn to use with es7 async and await
-	// async fn
-	// async fn
 
 /***/ },
 /* 1 */
