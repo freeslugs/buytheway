@@ -131,6 +131,14 @@ class SimpleMap extends Component {
     // console.log(data.pt.lat())
     // console.log(data.pt.lng())
     // console.log(data.address)
+    // var a = "41.8507300,-87.6512600";
+    // var b = "41.8525800,-87.6514100";
+    var newYork = await this.geocodePoint("35 colby drive");
+    var b = `${newYork.pt.lat()},${newYork.pt.lng()}`;
+    var boston = await this.geocodePoint("las vegas ");
+    var a = `${boston.pt.lat()},${boston.pt.lng()}`;
+    var data = await this.getTravelTime(a,b);
+    console.log(data);
   }
   
   // returns {pt => google pt (obj), address => formatted address (string)}
@@ -156,6 +164,20 @@ class SimpleMap extends Component {
     console.log("plotMarker")
   }
 
+  // returns travel time by car in seconds 
+  async getTravelTime(a, b) {
+    var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${a}&wp.1=${b}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`;
+    try {
+      var response = await fetch(toYQL(url)); 
+      var json = await response.json(); 
+      var data = json.query.results.json;
+      var travelTime = data.resourceSets.resources.travelDurationTraffic;
+      return travelTime;
+    } catch (e) {
+      console.log(`error fetching directions: ${ e }`)
+    }
+  }
+  
   plotDirections(origin, destination) {
     DirectionsService.route({
       origin: origin,
@@ -170,39 +192,6 @@ class SimpleMap extends Component {
         console.error(`error fetching directions ${ JSON.stringify(result) }`);
       }
     });
-  }
-
-  test() { 
-    console.log('hello')
-    var a = "41.8507300,-87.6512600";
-    var b = "41.8525800,-87.6514100";
-
-    // avoid cors error
-    // use yahoo's server as a proxy 
-    function toYQL(url) {
-      var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=',
-           query = 'select * from json where url="{url}"'.replace('{url}', url);
-
-      return yqlUrl + encodeURIComponent(query) + '&format=json';
-    }
-
-    var url = 'http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=' + a + '&wp.1='+ b + '&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2';
-
-    async function hello () {
-      try {
-        var response = await fetch(toYQL(url)); // async fn
-        var json = await response.json(); // async fn
-        var data = json.query.results.json;
-        return data;
-      } catch (e) {
-        console.log(`error fetching directions ${ JSON.stringify(e) }`)
-      }
-    }
-
-    async function hellotwo () {
-      var data = await hello();
-      console.log(data);
-    }
   }
 
   render () {
@@ -228,6 +217,13 @@ class SimpleMap extends Component {
       </div>
     );
   }
+}
+
+// use yahoo CORS proxy
+function toYQL(url) {
+  var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=';
+  var query = `select * from json where url="${url}"`;
+  return yqlUrl + encodeURIComponent(query) + '&format=json';
 }
 
 ReactDOM.render(
