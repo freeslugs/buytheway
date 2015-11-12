@@ -4,13 +4,13 @@ import {default as update} from "react-addons-update";
 
 import { GoogleMap, Marker, SearchBox, DirectionsRenderer } from "react-google-maps";
 
-require("babel-polyfill"); 
+require("babel-polyfill");
 
 const DirectionsService = new google.maps.DirectionsService();
 const Geocoder = new google.maps.Geocoder();
 
 class ListHeader extends Component {
-  
+
   render() {
     var backBtn;
     if(this.props.view != 0) {
@@ -21,18 +21,18 @@ class ListHeader extends Component {
         {backBtn}
         <h1 className="title">Buy The Way</h1>
         <a id="toggleBtn" className="button icon-right button-calm" onclick="toggleMapList()">Map</a>
-      </div>  
+      </div>
     );
   }
 }
 
 class List extends Component {
-  
+
   constructor(props) {
     super(props);
     this.state = {view: 0};
   }
-  
+
   render () {
     var content;
     if(this.state.view == 0) {
@@ -48,31 +48,29 @@ class List extends Component {
 }
 
 class RouteForm extends Component {
-  
+
   constructor(props) {
     super(props);
     this.state = {};
   }
-  
-  plotDirections() {  
+
+  plotDirections() {
     // if only one point exists, plot marker
-    // if both points exist, plot directions 
+    // if both points exist, plot directions
+    this.props.clearMarkers();
     var to = this.refs.to.value;
     var from = this.refs.from.value;
-    if(!to && !from) {
-      this.props.clearMarkers()
-    }
-    else if(to && !from) {
+    if(!!to && !from) {
       this.props.plotMarker(to);
     }
-    else if(!to && from) {
+    else if(!to && !!from) {
       this.props.plotMarker(from);
     }
-    else {
+    else if(!!to && !!from) {
       this.props.plotDirections(from, to);
     }
   }
-  
+
   submitRoute(e) {
     e.preventDefault();
     console.log("hey!")
@@ -80,7 +78,7 @@ class RouteForm extends Component {
     console.log(this.refs.to.value);
     console.log(this.refs.time.value);
   }
-  
+
   render () {
     return (
       <form>
@@ -107,7 +105,7 @@ class RouteForm extends Component {
 }
 
 class SimpleMap extends Component {
-  
+
   constructor(props) {
     super(props);
     this.state = {
@@ -125,7 +123,7 @@ class SimpleMap extends Component {
       }],
     }
   }
-    
+
   async componentDidMount () {
     // var data = await this.geocodePoint("35 colby drive dix hills new york");
     // console.log(data.pt.lat())
@@ -140,11 +138,11 @@ class SimpleMap extends Component {
     var data = await this.getTravelTime(a,b);
     console.log(data);
   }
-  
+
   // returns {pt => google pt (obj), address => formatted address (string)}
   async geocodePoint(query) {
     // promisify geocoder fn to use with es7 async and await
-    return new Promise(function(resolve,reject) { 
+    return new Promise(function(resolve,reject) {
       Geocoder.geocode({'address': query}, (results, status) => {
         if(status == google.maps.GeocoderStatus.OK) {
           resolve({address: results[0].formatted_address, pt: results[0].geometry.location});
@@ -156,20 +154,36 @@ class SimpleMap extends Component {
   }
 
   clearMarkers() {
-    // delete all state.markers
-    console.log("clearMarkers")
+    // delete all this.state.markers
+    var {markers} = this.state;
+    markers = update(markers, {
+      $set: []
+    });
+    this.setState({markers});
   }
 
-  plotMarker() {
-    console.log("plotMarker")
+  async plotMarker(pt) {
+    var point = await this.geocodePoint(pt);
+    var {markers} = this.state;
+    markers = update(markers, {
+      $push: [{
+        position: {
+          lat: point.pt.lat(),
+          lng: point.pt.lng()
+        },
+        defaultAnimation: 2,
+        key: Date.now()
+      }]
+    });
+    this.setState({ markers });
   }
 
-  // returns travel time by car in seconds 
+  // returns travel time by car in seconds
   async getTravelTime(a, b) {
     var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${a}&wp.1=${b}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`;
     try {
-      var response = await fetch(toYQL(url)); 
-      var json = await response.json(); 
+      var response = await fetch(toYQL(url));
+      var json = await response.json();
       var data = json.query.results.json;
       var travelTime = data.resourceSets.resources.travelDurationTraffic;
       return travelTime;
@@ -177,7 +191,7 @@ class SimpleMap extends Component {
       console.log(`error fetching directions: ${ e }`)
     }
   }
-  
+
   plotDirections(origin, destination) {
     DirectionsService.route({
       origin: origin,
@@ -197,7 +211,7 @@ class SimpleMap extends Component {
   render () {
     return (
       <div id="main-wrapper">
-        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers} plotMarker={this.plotMarker} />
+        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers.bind(this)} plotMarker={this.plotMarker.bind(this)} />
         <GoogleMap containerProps={{
             ...this.props,
             style: {
