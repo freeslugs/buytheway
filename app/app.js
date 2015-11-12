@@ -110,8 +110,18 @@ class SimpleMap extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      origin: new google.maps.LatLng(41.8507300, -87.6512600),
-      destination: new google.maps.LatLng(41.8525800, -87.6514100),
+      center: {
+        lat: 41.8507300,
+        lng: -87.6512600
+      },
+      origin: {
+        lat: 41.8507300,
+        lng: -87.6512600
+      },
+      destination: {
+        lat: 41.8507300,
+        lng: -87.6512600
+      },
       directions: null,
 
       markers: [{
@@ -119,7 +129,7 @@ class SimpleMap extends Component {
           lat: 41.8507300,
           lng: -87.6512600,
         },
-        key: "Taiwan",
+        key: "Default",
         defaultAnimation: 2
       }],
     }
