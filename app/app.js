@@ -60,13 +60,13 @@ class RouteForm extends Component {
     this.props.clearMarkers();
     var to = this.refs.to.value;
     var from = this.refs.from.value;
-    if(!!to && !from) {
+    if(to && !from) {
       this.props.plotMarker(to);
     }
-    else if(!to && !!from) {
+    else if(!to && from) {
       this.props.plotMarker(from);
     }
-    else if(!!to && !!from) {
+    else if(to && from) {
       this.props.plotDirections(from, to);
     }
 
