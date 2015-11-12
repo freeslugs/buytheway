@@ -136,18 +136,12 @@ class SimpleMap extends Component {
   }
 
   async componentDidMount () {
-    // var data = await this.geocodePoint("35 colby drive dix hills new york");
-    // console.log(data.pt.lat())
-    // console.log(data.pt.lng())
-    // console.log(data.address)
-    // var a = "41.8507300,-87.6512600";
-    // var b = "41.8525800,-87.6514100";
     var newYork = await this.geocodePoint("35 colby drive");
     var b = `${newYork.pt.lat()},${newYork.pt.lng()}`;
     var boston = await this.geocodePoint("las vegas ");
     var a = `${boston.pt.lat()},${boston.pt.lng()}`;
     var data = await this.getTravelTime(a,b);
-    console.log(data);
+    // console.log(data);
   }
 
   // returns {pt => google pt (obj), address => formatted address (string)}
@@ -166,11 +160,14 @@ class SimpleMap extends Component {
 
   clearMarkers() {
     // delete all this.state.markers
-    var {markers} = this.state;
+    var {markers, directions} = this.state;
     markers = update(markers, {
       $set: []
     });
-    this.setState({markers});
+    directions = update(directions, {
+      $set: null
+    });
+    this.setState({markers, directions});
   }
 
   async plotMarker(pt) {
@@ -195,7 +192,6 @@ class SimpleMap extends Component {
       }
     });
     this.setState({center});
-    console.log(this.state);
   }
 
   // returns travel time by car in seconds
