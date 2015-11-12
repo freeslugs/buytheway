@@ -69,6 +69,7 @@ class RouteForm extends Component {
     else if(!!to && !!from) {
       this.props.plotDirections(from, to);
     }
+
   }
 
   submitRoute(e) {
@@ -164,7 +165,7 @@ class SimpleMap extends Component {
 
   async plotMarker(pt) {
     var point = await this.geocodePoint(pt);
-    var {markers} = this.state;
+    var {markers, center} = this.state;
     markers = update(markers, {
       $push: [{
         position: {
@@ -175,7 +176,16 @@ class SimpleMap extends Component {
         key: Date.now()
       }]
     });
-    this.setState({ markers });
+    this.setState({markers});
+    //set center on marker
+    center = update(center, {
+      $set: {
+        lat: point.pt.lat(),
+        lng: point.pt.lng()
+      }
+    });
+    this.setState({center});
+    console.log(this.state);
   }
 
   // returns travel time by car in seconds
@@ -220,7 +230,9 @@ class SimpleMap extends Component {
             }
           }}
           defaultZoom={7}
-          defaultCenter={this.state.origin}>
+          defaultCenter={this.state.origin}
+          center={this.state.center}>
+
           {this.state.directions ? <DirectionsRenderer directions={this.state.directions} /> : null}
           {this.state.markers.map((marker, index) => {
             return (
