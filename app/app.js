@@ -51,15 +51,19 @@ class RouteForm extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      to: null,
+      from: null
+    };
   }
 
   plotDirections() {
     // if only one point exists, plot marker
     // if both points exist, plot directions
+    if(this.state.to === this.refs.to.value && this.state.from === this.refs.from.value) return;
     this.props.clearMarkers();
-    var to = this.refs.to.value;
-    var from = this.refs.from.value;
+    var to = this.state.to = this.refs.to.value;
+    var from = this.state.from = this.refs.from.value;
     if(to && !from) {
       this.props.plotMarker(to);
     }
