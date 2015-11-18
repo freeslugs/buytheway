@@ -20,7 +20,7 @@ class ListHeader extends Component {
       <div id="header" className="bar bar-header bar-calm">
         {backBtn}
         <h1 className="title">Buy The Way</h1>
-        <a id="toggleBtn" className="button icon-right button-calm" onclick="toggleMapList()">Map</a>
+        <button id="toggleBtn" className="button icon-right button-calm" onClick={this.props.toggleMapList}>Map</button>
       </div>
     );
   }
@@ -33,6 +33,13 @@ class List extends Component {
     this.state = {view: 0};
   }
 
+  toggleMapList(e) {
+    e.preventDefault();
+    this.state.view = 2; //viewing just the map
+    console.log(this);
+    //how to change this.props.view in listheader...
+  }
+
   render () {
     var content;
     if(this.state.view == 0) {
@@ -40,7 +47,7 @@ class List extends Component {
     }
     return (
       <div id="list-wrapper">
-        <ListHeader view={this.state.view} />
+        <ListHeader view={this.state.view} toggleMapList={this.toggleMapList.bind(this)}/>
         {content}
       </div>
     );
