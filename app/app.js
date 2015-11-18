@@ -14,13 +14,13 @@ class ListHeader extends Component {
   render() {
     var backBtn;
     if(this.props.view != 0) {
-      backBtn = <a id="backBtn" className="button icon-left ion-chevron-left button-calm">Back</a>
+      backBtn = <button id="backBtn" className="button icon-left ion-chevron-left button-calm" onClick={this.props.goBack}>Back</button>
     }
     return (
       <div id="header" className="bar bar-header bar-calm">
         {backBtn}
         <h1 className="title">Buy The Way</h1>
-        <button id="toggleBtn" className="button icon-right button-calm" onClick={this.props.toggleMapList}>Map</button>
+        <button id="toggleBtn" className="button icon-right button-calm" onClick={this.props.toggleMap}>Map</button>
       </div>
     );
   }
@@ -33,21 +33,26 @@ class List extends Component {
     this.state = {view: 0};
   }
 
-  toggleMapList(e) {
-    e.preventDefault();
-    this.state.view = 2; //viewing just the map
-    console.log(this);
-    //how to change this.props.view in listheader...
+  toggleMap() {
+    //do stuff to hide the list and display map only
+  }
+
+  toggleList() {
+    this.setState({view: 1}); //viewing list of results after clicking "Let's Go!"
+  }
+
+  goBack() {
+    this.setState({view: 0});
   }
 
   render () {
     var content;
     if(this.state.view == 0) {
-      content = <RouteForm {...this.props} />;
+      content = <RouteForm {...this.props} toggleList={this.toggleList.bind(this)}/>;
     }
     return (
       <div id="list-wrapper">
-        <ListHeader view={this.state.view} toggleMapList={this.toggleMapList.bind(this)}/>
+        <ListHeader view={this.state.view} toggleMap={this.toggleMap.bind(this)} goBack={this.goBack.bind(this)}/>
         {content}
       </div>
     );
@@ -85,6 +90,7 @@ class RouteForm extends Component {
 
   submitRoute(e) {
     e.preventDefault();
+    this.props.toggleList();
     console.log("hey!")
     console.log(this.refs.from.value);
     console.log(this.refs.to.value);
