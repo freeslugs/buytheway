@@ -24,4 +24,8 @@ find restaurants along your route
 - ask [@freeslugs](https://github.com/freeslugs)
 
 ## code conventions
-- avoid callback hell. use promises, and if you're returning a value (such a geocode pt), use `async` and `await`. 
+- avoid callback hell. use promises, and if you're returning a value (such a geocode pt), use `async` and `await`.
+
+## to-do
+- send api call to yelp to get list of restaurants
+- split app.js into different component files
