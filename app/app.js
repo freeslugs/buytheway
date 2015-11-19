@@ -88,13 +88,24 @@ class RouteForm extends Component {
 
   }
 
-  submitRoute(e) {
+  async submitRoute(e) {
     e.preventDefault();
-    this.props.toggleList();
+    try {
+      var yelpReq = await toYelpReq(this.state.to, "restaurants");
+      yelpReq = await toYQL(yelpReq);
+      var response = await fetch(yelpReq);
+      var json = await response.json();
+      console.log(json);
+
+
+      this.props.toggleList();
+    } catch (e) {
+      console.log(`error fetching directions: ${ e.stack }`)
+    }
     console.log("hey!")
-    console.log(this.refs.from.value);
-    console.log(this.refs.to.value);
-    console.log(this.refs.time.value);
+    // console.log(this.refs.from.value);
+    // console.log(this.refs.to.value);
+    // console.log(this.refs.time.value);
   }
 
   render () {
@@ -273,6 +284,50 @@ function toYQL(url) {
   var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=';
   var query = `select * from json where url="${url}"`;
   return yqlUrl + encodeURIComponent(query) + '&format=json';
+}
+
+// yelp api call
+async function toYelpReq (cord, q) {
+  var auth = {
+    consumerKey: "qS19AZDF1zfIP-9bGFDQHw",
+    consumerSecret: "GX0L6102vHgZmg_wjht7wrhikSc",
+    accessToken: "ilTgzJb97aVo1MvmX_KxS4-ztQwzqfw5",
+    accessTokenSecret: "XbOMXThCHGmuyxBLuQXupipuYG8",
+    serviceProvider: {
+      signatureMethod: "HMAC-SHA1"
+    }
+  };
+  var accessor = {
+    consumerSecret: auth.consumerSecret,
+    tokenSecret: auth.accessTokenSecret
+  };
+  var parameters = [];
+  parameters.push(['term', q]);
+  parameters.push(['location', cord]);
+  // parameters.push(['callback', 'cb']);
+  parameters.push(['oauth_consumer_key', auth.consumerKey]);
+  parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
+  parameters.push(['oauth_token', auth.accessToken]);
+  parameters.push(['oauth_signature_method', 'HMAC-SHA1']);
+  var message = {
+    'action': 'http://api.yelp.com/v2/search',
+    'method': 'GET',
+    'parameters': parameters
+  };
+  OAuth.setTimestampAndNonce(message);
+  OAuth.SignatureMethod.sign(message, accessor);
+  var parameterMap = OAuth.getParameterMap(message.parameters);
+  parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature)
+  // $.ajax({
+  //   'url': message.action,
+  //   'data': parameterMap,
+  //   'cache': true,
+  //   'dataType': 'jsonp',
+  //   'jsonpCallback': 'cb',
+  //   'success': callback
+  // });
+  return message.action + "?" + $.param(parameterMap);
+
 }
 
 ReactDOM.render(
