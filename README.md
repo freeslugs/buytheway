@@ -27,6 +27,6 @@ find restaurants along your route
 - avoid callback hell. use promises, and if you're returning a value (such a geocode pt), use `async` and `await`.
 
 ## to-do
-- send api call to yelp to get list of restaurants
+- scrollable restaurant list?
 - split app.js into different component files
 - gas stations?
