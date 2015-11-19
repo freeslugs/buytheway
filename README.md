@@ -29,3 +29,4 @@ find restaurants along your route
 ## to-do
 - send api call to yelp to get list of restaurants
 - split app.js into different component files
+- gas stations?
