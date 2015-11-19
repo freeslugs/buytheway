@@ -30,15 +30,19 @@ class List extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {view: 0};
+    this.state = {
+      view: 0,
+      restaurantsList: []
+    };
   }
 
   toggleMap() {
     //do stuff to hide the list and display map only
   }
 
-  toggleList() {
+  toggleRestaurantsList(restaurantsList) {
     this.setState({view: 1}); //viewing list of results after clicking "Let's Go!"
+    this.setState({restaurantsList});
   }
 
   goBack() {
@@ -48,7 +52,9 @@ class List extends Component {
   render () {
     var content;
     if(this.state.view == 0) {
-      content = <RouteForm {...this.props} toggleList={this.toggleList.bind(this)}/>;
+      content = <RouteForm {...this.props} toggleRestaurantsList={this.toggleRestaurantsList.bind(this)}/>;
+    } else if(this.state.view == 1) {
+      content = <RestaurantsList restaurantsList={this.state.restaurantsList}/>;
     }
     return (
       <div id="list-wrapper">
@@ -57,6 +63,28 @@ class List extends Component {
       </div>
     );
   }
+}
+
+class RestaurantsList extends Component {
+  render() {
+    var list = [];
+    this.props.restaurantsList.forEach((restaurant) => {
+      list.push(
+        <a className="item item-thumbnail-left" href={restaurant.url} key={restaurant.id}>
+          <img src={restaurant.image_url}></img>
+          <h2>{restaurant.name}</h2>
+
+        </a>);
+    });
+    return (
+      <div id="restaurant-list-wrapper">
+        <ul className="list">
+          {list}
+        </ul>
+      </div>
+    );
+  }
+
 }
 
 class RouteForm extends Component {
@@ -98,11 +126,11 @@ class RouteForm extends Component {
       console.log(json);
 
 
-      this.props.toggleList();
+      this.props.toggleRestaurantsList(json.query.results.json.businesses);
     } catch (e) {
       console.log(`error fetching directions: ${ e.stack }`)
     }
-    console.log("hey!")
+    // console.log("hey!")
     // console.log(this.refs.from.value);
     // console.log(this.refs.to.value);
     // console.log(this.refs.time.value);
