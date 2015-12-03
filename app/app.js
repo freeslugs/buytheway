@@ -329,7 +329,7 @@ class SimpleMap extends Component {
               width: "100%"
             }
           }}
-          defaultZoom={this.state.zoom}
+          zoom={this.state.zoom}
           defaultCenter={this.state.origin}
           center={this.state.center}>
 
