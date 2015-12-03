@@ -119,7 +119,25 @@ class RouteForm extends Component {
   async submitRoute(e) {
     e.preventDefault();
     try {
-      var yelpReq = await toYelpReq(this.state.to, "restaurants");
+      var yelpReq;
+      var timeLeft = this.refs.time.value * 60;
+      var travelTime = 0;
+      this.props.directions.routes[0].legs[0].steps.forEach(function(step) {
+        travelTime = travelTime + step.duration.value;
+      });
+      if(travelTime < timeLeft) {
+        yelpReq = await toYelpReq(this.state.to, "restaurants");
+      } else {
+        var stepNum = 0;
+        while(timeLeft > 0) {
+          timeLeft -= this.props.directions.routes[0].legs[0].steps[stepNum].duration.value;
+          stepNum += 1;
+        }
+        console.log(this.state.to);
+        console.log(this.props.directions.routes[0].legs[0].steps[stepNum].start_location.lat());
+        yelpReq = await toYelpReq(this.props.directions.routes[0].legs[0].steps[stepNum].start_location, "restaurants");
+      }
+      console.log(yelpReq);
       yelpReq = await toYQL(yelpReq);
       var response = await fetch(yelpReq);
       var json = await response.json();
@@ -273,7 +291,7 @@ class SimpleMap extends Component {
       if(status == google.maps.DirectionsStatus.OK) {
         this.setState({
           directions: result
-        })
+        });
       } else {
         console.error(`error fetching directions ${ JSON.stringify(result) }`);
       }
@@ -283,7 +301,7 @@ class SimpleMap extends Component {
   render () {
     return (
       <div id="main-wrapper">
-        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers.bind(this)} plotMarker={this.plotMarker.bind(this)} />
+        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers.bind(this)} plotMarker={this.plotMarker.bind(this)} directions={this.state.directions}/>
         <GoogleMap containerProps={{
             ...this.props,
             style: {
@@ -331,7 +349,12 @@ async function toYelpReq (cord, q) {
   };
   var parameters = [];
   parameters.push(['term', q]);
-  parameters.push(['location', cord]);
+  if(cord.lat && cord.lng) {
+    console.log(`${cord.lat()},${cord.lng()}`);
+    parameters.push(['ll', `${cord.lat()},${cord.lng()}`]);
+  } else {
+    parameters.push(['location', cord]);
+  }
   // parameters.push(['callback', 'cb']);
   parameters.push(['oauth_consumer_key', auth.consumerKey]);
   parameters.push(['oauth_consumer_secret', auth.consumerSecret]);

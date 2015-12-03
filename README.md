@@ -27,6 +27,8 @@ find restaurants along your route
 - avoid callback hell. use promises, and if you're returning a value (such a geocode pt), use `async` and `await`.
 
 ## to-do
-- scrollable restaurant list?
+- location after time
 - split app.js into different component files
 - gas stations?
+- config keys
+- scrollable restaurant list?
