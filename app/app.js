@@ -119,31 +119,37 @@ class RouteForm extends Component {
   async submitRoute(e) {
     e.preventDefault();
     try {
-      var yelpReq;
+      var yelpReq, finalLocation;
+      var route = this.props.directions.routes[0].legs[0];
       var timeLeft = this.refs.time.value * 60;
       var travelTime = 0;
-      this.props.directions.routes[0].legs[0].steps.forEach(function(step) {
+      // console.log(route);
+      route.steps.forEach(function(step) {
         travelTime = travelTime + step.duration.value;
       });
       if(travelTime < timeLeft) {
-        yelpReq = await toYelpReq(this.state.to, "restaurants");
+        finalLocation = route.steps[route.steps.length - 1].end_location;
       } else {
         var stepNum = 0;
         while(timeLeft > 0) {
-          timeLeft -= this.props.directions.routes[0].legs[0].steps[stepNum].duration.value;
+          timeLeft -= route.steps[stepNum].duration.value;
           stepNum += 1;
         }
-        console.log(this.state.to);
-        console.log(this.props.directions.routes[0].legs[0].steps[stepNum].start_location.lat());
-        yelpReq = await toYelpReq(this.props.directions.routes[0].legs[0].steps[stepNum].start_location, "restaurants");
+        finalLocation = route.steps[stepNum].start_location;
       }
-      console.log(yelpReq);
+
+      yelpReq = await toYelpReq(`${finalLocation.lat()},${finalLocation.lng()}`, "restaurants");
       yelpReq = await toYQL(yelpReq);
       var response = await fetch(yelpReq);
       var json = await response.json();
       console.log(json);
 
-
+      this.props.clearMarkers();
+      this.props.plotMarker(finalLocation);
+      json.query.results.json.businesses.forEach(function(business) {
+        this.props.plotMarker(business.location.coordinate);
+      }, this);
+      this.props.setZoom(12);
       this.props.toggleRestaurantsList(json.query.results.json.businesses);
     } catch (e) {
       console.log(`error fetching directions: ${ e.stack }`)
@@ -197,7 +203,7 @@ class SimpleMap extends Component {
         lng: -87.6512600
       },
       directions: null,
-
+      zoom: 7,
       markers: [{
         position: {
           lat: 41.8507300,
@@ -221,15 +227,29 @@ class SimpleMap extends Component {
   // returns {pt => google pt (obj), address => formatted address (string)}
   async geocodePoint(query) {
     // promisify geocoder fn to use with es7 async and await
-    return new Promise(function(resolve,reject) {
-      Geocoder.geocode({'address': query}, (results, status) => {
-        if(status == google.maps.GeocoderStatus.OK) {
-          resolve({address: results[0].formatted_address, pt: results[0].geometry.location});
-        } else {
-          reject(results)
-        }
+    if(query.lat && query.lng) {
+      return {pt: {lat: query.lat, lng: query.lng}};
+    } else if(query.latitude && query.longitude) {
+      return {pt: {
+        lat: function() {return parseFloat(query.latitude);},
+        lng: function() {return parseFloat(query.longitude);}
+      }};
+    } else {
+      return new Promise(function(resolve,reject) {
+        Geocoder.geocode({'address': query}, (results, status) => {
+          if(status == google.maps.GeocoderStatus.OK) {
+            console.log({results, status});
+            resolve({address: results[0].formatted_address, pt: results[0].geometry.location});
+          } else {
+            reject({results, status});
+          }
+        });
       });
-    });
+    }
+  }
+
+  setZoom(newzoom) {
+    this.setState({zoom: newzoom});
   }
 
   clearMarkers() {
@@ -301,7 +321,7 @@ class SimpleMap extends Component {
   render () {
     return (
       <div id="main-wrapper">
-        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers.bind(this)} plotMarker={this.plotMarker.bind(this)} directions={this.state.directions}/>
+        <List plotDirections={this.plotDirections.bind(this)} clearMarkers={this.clearMarkers.bind(this)} plotMarker={this.plotMarker.bind(this)} directions={this.state.directions} setZoom={this.setZoom.bind(this)}/>
         <GoogleMap containerProps={{
             ...this.props,
             style: {
@@ -309,7 +329,7 @@ class SimpleMap extends Component {
               width: "100%"
             }
           }}
-          defaultZoom={7}
+          defaultZoom={this.state.zoom}
           defaultCenter={this.state.origin}
           center={this.state.center}>
 
@@ -349,12 +369,7 @@ async function toYelpReq (cord, q) {
   };
   var parameters = [];
   parameters.push(['term', q]);
-  if(cord.lat && cord.lng) {
-    console.log(`${cord.lat()},${cord.lng()}`);
-    parameters.push(['ll', `${cord.lat()},${cord.lng()}`]);
-  } else {
-    parameters.push(['location', cord]);
-  }
+  parameters.push(['ll', cord]);
   // parameters.push(['callback', 'cb']);
   parameters.push(['oauth_consumer_key', auth.consumerKey]);
   parameters.push(['oauth_consumer_secret', auth.consumerSecret]);
