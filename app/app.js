@@ -40,19 +40,20 @@ class List extends Component {
     //do stuff to hide the list and display map only
   }
 
-  toggleRestaurantsList(restaurantsList) {
-    this.setState({view: 1}); //viewing list of results after clicking "Let's Go!"
-    this.setState({restaurantsList});
+  populateRestaurantsList(restaurantsList) {
+    this.setState({restaurantsList, view: 1});
   }
 
   goBack() {
     this.setState({view: 0});
+    // todo: state.view -= 1
   }
 
   render () {
     var content;
+    // todo: js switch statement
     if(this.state.view == 0) {
-      content = <RouteForm {...this.props} toggleRestaurantsList={this.toggleRestaurantsList.bind(this)}/>;
+      content = <RouteForm {...this.props} populateRestaurantsList={this.populateRestaurantsList.bind(this)}/>;
     } else if(this.state.view == 1) {
       content = <RestaurantsList restaurantsList={this.state.restaurantsList}/>;
     }
@@ -65,21 +66,22 @@ class List extends Component {
   }
 }
 
+class RestaurantsItem extends Component {
+  render() {
+    return (<a className="item item-thumbnail-left" href={this.props.restaurant.url} key={this.props.restaurant.id}>
+      <img src={this.props.restaurant.image_url}></img>
+      <h2>{this.props.restaurant.name}</h2>
+    </a>);
+  }
+}
+
 class RestaurantsList extends Component {
   render() {
-    var list = [];
-    this.props.restaurantsList.forEach((restaurant) => {
-      list.push(
-        <a className="item item-thumbnail-left" href={restaurant.url} key={restaurant.id}>
-          <img src={restaurant.image_url}></img>
-          <h2>{restaurant.name}</h2>
-
-        </a>);
-    });
+    // todo: Each child in an array or iterator should have a unique "key" prop. Check the render method of `RestaurantsList
     return (
       <div id="restaurant-list-wrapper">
         <ul className="list">
-          {list}
+          {this.props.restaurantsList.map((restaurant) => { return (<RestaurantsItem restaurant={restaurant} />) } )}
         </ul>
       </div>
     );
@@ -100,6 +102,8 @@ class RouteForm extends Component {
   plotDirections() {
     // if only one point exists, plot marker
     // if both points exist, plot directions
+
+    // prevent re-rendering already plotted values
     if(this.state.to === this.refs.to.value && this.state.from === this.refs.from.value) return;
     this.props.clearMarkers();
     var to = this.state.to = this.refs.to.value;
@@ -117,40 +121,54 @@ class RouteForm extends Component {
   }
 
   async submitRoute(e) {
+    // format url
+    // make request
+    // parse data
+    // render
     e.preventDefault();
     try {
-      var yelpReq, finalLocation;
+      var yelpReq, fYelpReq, waypoint;
       var route = this.props.directions.routes[0].legs[0];
+
+      // tood: astract this -- fun function
       var timeLeft = this.refs.time.value * 60;
       var travelTime = 0;
-      // console.log(route);
       route.steps.forEach(function(step) {
         travelTime = travelTime + step.duration.value;
       });
       if(travelTime < timeLeft) {
-        finalLocation = route.steps[route.steps.length - 1].end_location;
+        waypoint = route.steps[route.steps.length - 1].end_location;
       } else {
         var stepNum = 0;
         while(timeLeft > 0) {
           timeLeft -= route.steps[stepNum].duration.value;
           stepNum += 1;
         }
-        finalLocation = route.steps[stepNum].start_location;
+        waypoint = route.steps[stepNum].start_location;
       }
 
-      yelpReq = await toYelpReq(`${finalLocation.lat()},${finalLocation.lng()}`, "restaurants");
-      yelpReq = await toYQL(yelpReq);
-      var response = await fetch(yelpReq);
+      // findWaypoint(route, timeLeft) {
+      //   //binary search of bing traffic route
+      //   return null;
+      // }
+
+      // generate yelp api request
+      yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, "restaurants");
+      // format yelp ==> yql
+      fYelpReq = await toYQL(yelpReq);
+      // make requese
+      var response = await fetch(fYelpReq);
       var json = await response.json();
+      // parse it
       console.log(json);
 
       this.props.clearMarkers();
-      this.props.plotMarker(finalLocation);
+      this.props.plotMarker(waypoint);
       json.query.results.json.businesses.forEach(function(business) {
         this.props.plotMarker(business.location.coordinate);
       }, this);
       this.props.setZoom(12);
-      this.props.toggleRestaurantsList(json.query.results.json.businesses);
+      this.props.populateRestaurantsList(json.query.results.json.businesses);
     } catch (e) {
       console.log(`error fetching directions: ${ e.stack }`)
     }
@@ -190,9 +208,10 @@ class SimpleMap extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      // center on US
       center: {
-        lat: 41.8507300,
-        lng: -87.6512600
+        lat: 39.50,
+        lng: -120.35
       },
       origin: {
         lat: 41.8507300,
@@ -203,7 +222,7 @@ class SimpleMap extends Component {
         lng: -87.6512600
       },
       directions: null,
-      zoom: 7,
+      zoom: 3,
       markers: [{
         position: {
           lat: 41.8507300,
@@ -286,6 +305,7 @@ class SimpleMap extends Component {
       }
     });
     this.setState({center});
+    this.setState({zoom: 7})
   }
 
   // returns travel time by car in seconds
