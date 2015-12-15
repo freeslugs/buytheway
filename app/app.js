@@ -71,9 +71,11 @@ class List extends Component {
 
 class RestaurantsItem extends Component {
   render() {
-    return (<a className="item item-thumbnail-left" href={this.props.restaurant.url} key={this.props.restaurant.id}>
+    return (
+    <a className="item item-thumbnail-left" href={this.props.restaurant.url} key={this.props.restaurant.id}>
       <img src={this.props.restaurant.image_url}></img>
       <h2>{this.props.restaurant.name}</h2>
+      <img src={this.props.restaurant.rating_img_url}></img>
     </a>);
   }
 }
@@ -125,15 +127,17 @@ class RouteForm extends Component {
 
   async getWayPoint() {
     try {
-      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${this.state.from}&wp.1=${this.state.to}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`));
+      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${this.state.from}&wp.1=${this.state.to}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath`));
       var route = await response.json();
       var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
       var timeLeft = this.refs.time.value * 60;
       console.log(route);
       var waypoint = routeLegs.endLocation.geocodePoints.coordinates; //if timeLeft is more than total travel time
-      await routeLegs.itineraryItems.every(function(path) {
+      await routeLegs.itineraryItems.every(function(path, index) {
         if(timeLeft < 0) {
-          waypoint = path.maneuverPoint.coordinates;
+          waypoint = this.getClosestPt(route, index, timeLeft);
+          console.log(path.maneuverPoint.coordinates);
+          // waypoint = path.maneuverPoint.coordinates;
           return false;
         } else {
           timeLeft = timeLeft - path.travelDuration;
@@ -145,8 +149,24 @@ class RouteForm extends Component {
     } catch(e) {
       console.log(`error fetching waypoint: ${ e.stack }`);
     }
+  }
 
-
+  getClosestPt(route, index, timeLeft) {
+    //timeLeft is going to be negative, so we backtrack
+    console.log(route + " " + timeLeft + " " + index);
+    // var meanSpeed = 50; //50 mph
+    var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
+    var routePath = route.query.results.json.resourceSets.resources.routePath.line.coordinates;
+    var meanSpeed = routeLegs.itineraryItems[index].travelDistance / (routeLegs.itineraryItems[index].travelDuration / 3600) / 1.609; //mph
+    var curIdx = routeLegs.itineraryItems[index].details.startPathIndices || routeLegs.itineraryItems[index].details[0].startPathIndices;
+    console.log(curIdx);
+    while(timeLeft < 0 && curIdx > 0) {
+      console.log(timeLeft + " " + curIdx);
+      timeLeft = timeLeft + Math.abs(dist(routePath[curIdx].json[0], routePath[curIdx].json[1], routePath[curIdx-1].json[0], routePath[curIdx-1].json[1]))/meanSpeed*3600;
+      curIdx = curIdx - 1;
+    }
+    console.log(routePath[curIdx] + " " + curIdx);
+    return routePath[curIdx].json;
   }
 
   async submitRoute(e) {
@@ -161,10 +181,8 @@ class RouteForm extends Component {
       waypoint = await this.getWayPoint();
       // generate yelp api request
       yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, "restaurants");
-      // format yelp ==> yql
-      fYelpReq = await toYQL(yelpReq);
-      // make requese
-      var response = await fetch(fYelpReq);
+      // format yelp ==> yql and make request
+      var response = await fetch(toYQL(yelpReq));
       var json = await response.json();
       // parse it
       console.log(json);
@@ -173,7 +191,9 @@ class RouteForm extends Component {
       this.props.plotMarker(waypoint);
       this.props.setZoom(12); //this isn't working?
       json.query.results.json.businesses.forEach(function(business) {
-        this.props.plotMarker(business.location.coordinate);
+        this.props.plotMarker(business.location.coordinate, "restaurant.png");
+        // console.log(dist(waypoint.lat(), waypoint.lng(), business.location.coordinate.latitude, business.location.coordinate.longitude));
+        // business.addedTime = this.getAddedTime(business); //calculate added time to route
       }, this);
 
       this.props.populateRestaurantsList(json.query.results.json.businesses);
@@ -287,7 +307,7 @@ class SimpleMap extends Component {
     this.setState({markers});
   }
 
-  async plotMarker(pt) {
+  async plotMarker(pt, image) {
     var point = await this.geocodePoint(pt);
     var {markers, center} = this.state;
     markers = update(markers, {
@@ -297,7 +317,8 @@ class SimpleMap extends Component {
           lng: point.pt.lng()
         },
         defaultAnimation: 2,
-        key: Date.now()
+        key: Date.now(),
+        icon: image
       }]
     });
     this.setState({markers});
@@ -374,6 +395,24 @@ function toYQL(url) {
   var yqlUrl = 'http://query.yahooapis.com/v1/public/yql?q=';
   var query = `select * from json where url="${url}"`;
   return yqlUrl + encodeURIComponent(query) + '&format=json';
+}
+
+function dist(lat1, lon1, lat2, lon2) {
+  //https://stackoverflow.com/questions/365826/calculate-distance-between-2-gps-coordinates
+  var R = 3958.7558657440545; // km
+  var dLat = toRad((lat2-lat1));
+  var dLon = toRad((lon2-lon1));
+  var lat1 = toRad(lat1);
+  var lat2 = toRad(lat2);
+
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function toRad(val) {
+  return val * Math.PI / 180;
 }
 
 // yelp api call
