@@ -278,14 +278,14 @@ class SimpleMap extends Component {
 
   clearMarkers() {
     // delete all this.state.markers
-    var {markers, directions} = this.state;
+    var {markers} = this.state;
     markers = update(markers, {
       $set: []
     });
-    directions = update(directions, {
-      $set: null
-    });
-    this.setState({markers, directions});
+    // directions = update(directions, {
+    //   $set: null
+    // });
+    this.setState({markers});
   }
 
   async plotMarker(pt) {
