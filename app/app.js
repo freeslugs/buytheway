@@ -136,8 +136,6 @@ class RouteForm extends Component {
       await routeLegs.itineraryItems.every(function(path, index) {
         if(timeLeft < 0) {
           waypoint = this.getClosestPt(route, index, timeLeft);
-          console.log(path.maneuverPoint.coordinates);
-          // waypoint = path.maneuverPoint.coordinates;
           return false;
         } else {
           timeLeft = timeLeft - path.travelDuration;
@@ -153,19 +151,14 @@ class RouteForm extends Component {
 
   getClosestPt(route, index, timeLeft) {
     //timeLeft is going to be negative, so we backtrack
-    console.log(route + " " + timeLeft + " " + index);
-    // var meanSpeed = 50; //50 mph
     var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
     var routePath = route.query.results.json.resourceSets.resources.routePath.line.coordinates;
     var meanSpeed = routeLegs.itineraryItems[index].travelDistance / (routeLegs.itineraryItems[index].travelDuration / 3600) / 1.609; //mph
     var curIdx = routeLegs.itineraryItems[index].details.startPathIndices || routeLegs.itineraryItems[index].details[0].startPathIndices;
-    console.log(curIdx);
     while(timeLeft < 0 && curIdx > 0) {
-      console.log(timeLeft + " " + curIdx);
       timeLeft = timeLeft + Math.abs(dist(routePath[curIdx].json[0], routePath[curIdx].json[1], routePath[curIdx-1].json[0], routePath[curIdx-1].json[1]))/meanSpeed*3600;
       curIdx = curIdx - 1;
     }
-    console.log(routePath[curIdx] + " " + curIdx);
     return routePath[curIdx].json;
   }
 
