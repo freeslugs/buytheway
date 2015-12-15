@@ -2,7 +2,7 @@ import {default as React, Component} from "react";
 import {default as ReactDOM} from "react-dom";
 import {default as update} from "react-addons-update";
 
-import { GoogleMap, Marker, SearchBox, DirectionsRenderer } from "react-google-maps";
+import { GoogleMap, Marker, InfoWindow, SearchBox, DirectionsRenderer } from "react-google-maps";
 
 require("babel-polyfill");
 
@@ -197,7 +197,7 @@ class RouteForm extends Component {
       // get waypoint
       waypoint = await this.getWayPoint();
       // generate yelp api request
-      yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, this.refs.query.value);
+      yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, this.refs.query.value || "restaurants");
       // format yelp ==> yql and make request
       var response = await fetch(toYQL(yelpReq));
       var json = await response.json();
@@ -209,7 +209,7 @@ class RouteForm extends Component {
       this.props.setZoom(12); //this isn't working?
       this.props.populateRestaurantsList(json.query.results.json.businesses);
       json.query.results.json.businesses.forEach(async function(business, index) {
-        this.props.plotMarker(business.location.coordinate, "restaurant.png");
+        this.props.plotMarker(business.location.coordinate, "restaurant.png", business);
         await this.displayAddedTime(business, index);
       }, this);
     } catch (e) {
@@ -246,6 +246,21 @@ class RouteForm extends Component {
   }
 }
 
+class RestaurantInfoWindow extends Component {
+  render() {
+    return (
+      <InfoWindow>
+        <a class='item item-thumbnail-left' href={this.props.business.url}>
+          <img src={this.props.business.image_url}></img>
+          <h2>{this.props.business.name}</h2>
+          <img src={this.props.business.rating_img_url}></img>
+          <p>{this.props.business.addedTime} minutes added to route</p>
+        </a>
+      </InfoWindow>
+    );
+  }
+}
+
 class SimpleMap extends Component {
 
   constructor(props) {
@@ -274,6 +289,7 @@ class SimpleMap extends Component {
         key: "Default",
         defaultAnimation: 2
       }],
+      infoWindow: null
     }
   }
 
@@ -326,7 +342,8 @@ class SimpleMap extends Component {
     this.setState({markers});
   }
 
-  async plotMarker(pt, image) {
+  async plotMarker(pt, image, business) {
+    console.log(business);
     var point = await this.geocodePoint(pt);
     var {markers, center} = this.state;
     markers = update(markers, {
@@ -337,7 +354,9 @@ class SimpleMap extends Component {
         },
         defaultAnimation: 2,
         key: Date.now(),
-        icon: image
+        icon: image,
+        showInfo: false,
+        business: business
       }]
     });
     this.setState({markers});
@@ -368,6 +387,29 @@ class SimpleMap extends Component {
     });
   }
 
+  handleCloseClick(marker) {
+    marker.showInfo = false;
+    this.setState(this.state);
+  }
+
+  handleMarkerClick(marker) {
+    marker.showInfo = true;
+    this.setState(this.state);
+  }
+
+  renderInfoWindow(ref, marker) {
+    return (
+      <InfoWindow key={`${ref}_info_window`} onCloseclick={this.handleCloseClick.bind(this, marker)}>
+        <a class='item item-thumbnail-left' href={marker.business.url}>
+          <img src={marker.business.image_url}></img>
+          <h2>{marker.business.name}</h2>
+          <img src={marker.business.rating_img_url}></img>
+          <p>{marker.business.addedTime} minutes added to route</p>
+        </a>
+      </InfoWindow>
+      )
+  }
+
   render () {
     return (
       <div id="main-wrapper">
@@ -385,8 +427,12 @@ class SimpleMap extends Component {
 
           {this.state.directions ? <DirectionsRenderer directions={this.state.directions} /> : null}
           {this.state.markers.map((marker, index) => {
+            const ref = `marker_${index}`;
+
             return (
-              <Marker {...marker} onClick={this.test} />
+              <Marker {...marker} key={ref} onClick={this.handleMarkerClick.bind(this, marker)}>
+                {marker.showInfo ? this.renderInfoWindow(ref, marker) : null}
+              </Marker>
             );
           })} />
         </GoogleMap>
