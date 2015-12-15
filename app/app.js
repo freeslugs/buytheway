@@ -47,6 +47,12 @@ class List extends Component {
     this.setState({restaurantsList, view: 1});
   }
 
+  displayAddedTime(time, index) {
+    var {restaurantsList} = this.state;
+    restaurantsList[index].addedTime = time;
+    this.setState({restaurantsList});
+  }
+
   goBack() {
     this.setState({view: 0});
     // todo: state.view -= 1
@@ -56,7 +62,7 @@ class List extends Component {
     var content;
     // todo: js switch statement
     if(this.state.view == 0) {
-      content = <RouteForm {...this.props} populateRestaurantsList={this.populateRestaurantsList.bind(this)}/>;
+      content = <RouteForm {...this.props} populateRestaurantsList={this.populateRestaurantsList.bind(this)} displayAddedTime={this.displayAddedTime.bind(this)}/>;
     } else if(this.state.view == 1) {
       content = <RestaurantsList restaurantsList={this.state.restaurantsList}/>;
     }
@@ -71,11 +77,13 @@ class List extends Component {
 
 class RestaurantsItem extends Component {
   render() {
+    var addedTimeMsg = this.props.restaurant.addedTime ? <p>{this.props.restaurant.addedTime} minutes added to route.</p> : null;
     return (
     <a className="item item-thumbnail-left" href={this.props.restaurant.url} key={this.props.restaurant.id}>
       <img src={this.props.restaurant.image_url}></img>
       <h2>{this.props.restaurant.name}</h2>
       <img src={this.props.restaurant.rating_img_url}></img>
+      {addedTimeMsg}
     </a>);
   }
 }
@@ -127,7 +135,7 @@ class RouteForm extends Component {
 
   async getWayPoint() {
     try {
-      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(this.state.from)}&wp.1=${encodeURIComponent(this.state.to)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath`));
+      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(this.state.from)}&wp.1=${encodeURIComponent(this.state.to)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath&du=mi`));
       var route = await response.json();
       console.log(route);
       var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
@@ -153,13 +161,25 @@ class RouteForm extends Component {
     //timeLeft is going to be negative, so we backtrack
     var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
     var routePath = route.query.results.json.resourceSets.resources.routePath.line.coordinates;
-    var meanSpeed = routeLegs.itineraryItems[index].travelDistance / (routeLegs.itineraryItems[index].travelDuration / 3600) / 1.609; //mph
+    var meanSpeed = routeLegs.itineraryItems[index].travelDistance / (routeLegs.itineraryItems[index].travelDuration / 3600); //mph
     var curIdx = routeLegs.itineraryItems[index].details.startPathIndices || routeLegs.itineraryItems[index].details[0].startPathIndices;
     while(timeLeft < 0 && curIdx > 0) {
       timeLeft = timeLeft + Math.abs(dist(routePath[curIdx].json[0], routePath[curIdx].json[1], routePath[curIdx-1].json[0], routePath[curIdx-1].json[1]))/meanSpeed*3600;
       curIdx = curIdx - 1;
     }
     return routePath[curIdx].json;
+  }
+
+  async displayAddedTime(business, index) {
+    try {
+      var restaurantAddress = `${business.location.coordinate.latitude},${business.location.coordinate.longitude}`;
+      var timeToRestaurant = await getTravelTime(this.state.from, restaurantAddress);
+      var timeToDestination = await getTravelTime(restaurantAddress, this.state.to);
+      this.props.displayAddedTime(parseInt((parseInt(timeToRestaurant) + parseInt(timeToDestination) - parseInt(this.props.directions.routes[0].legs[0].duration.value))/60), index);
+    } catch(e) {
+      console.log(`error calculating added time: ${ e.stack }`);
+    }
+
   }
 
   async submitRoute(e) {
@@ -183,15 +203,20 @@ class RouteForm extends Component {
       this.props.clearMarkers();
       this.props.plotMarker(waypoint);
       this.props.setZoom(12); //this isn't working?
-      json.query.results.json.businesses.forEach(function(business) {
+      this.props.populateRestaurantsList(json.query.results.json.businesses);
+      json.query.results.json.businesses.forEach(async function(business, index) {
         this.props.plotMarker(business.location.coordinate, "restaurant.png");
         // console.log(dist(waypoint.lat(), waypoint.lng(), business.location.coordinate.latitude, business.location.coordinate.longitude));
-        // business.addedTime = this.getAddedTime(business); //calculate added time to route
+        await this.displayAddedTime(business, index);
       }, this);
 
-      this.props.populateRestaurantsList(json.query.results.json.businesses);
+      // for(var business of json.query.results.json.businesses) {
+      //   this.props.plotMarker(business.location.coordinate, "restaurant.png");
+      //   // console.log(dist(waypoint.lat(), waypoint.lng(), business.location.coordinate.latitude, business.location.coordinate.longitude));
+      //   business.addedTime = await this.getAddedTime(business); //calculate added time to route
+      // }
     } catch (e) {
-      console.log(`error fetching directions: ${ e.stack }`);
+      console.log(`error fetching route: ${ e.stack }`);
     }
   }
 
@@ -326,20 +351,6 @@ class SimpleMap extends Component {
     this.setZoom(7);
   }
 
-  // returns travel time by car in seconds
-  async getTravelTime(a, b) {
-    var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(a)}&wp.1=${encodeURIComponent(b)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`;
-    try {
-      var response = await fetch(toYQL(url));
-      var json = await response.json();
-      var data = json.query.results.json;
-      var travelTime = data.resourceSets.resources.travelDurationTraffic;
-      return travelTime;
-    } catch (e) {
-      console.log(`error fetching directions: ${ e }`)
-    }
-  }
-
   plotDirections(origin, destination) {
     DirectionsService.route({
       origin: origin,
@@ -406,6 +417,21 @@ function dist(lat1, lon1, lat2, lon2) {
 
 function toRad(val) {
   return val * Math.PI / 180;
+}
+
+// returns travel time by car in seconds
+async function getTravelTime(a, b) {
+  var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(a)}&wp.1=${encodeURIComponent(b)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath&du=mi`;
+  try {
+    var response = await fetch(toYQL(url));
+    var json = await response.json();
+    var data = json.query.results.json;
+    var travelTime = data.resourceSets.resources.travelDurationTraffic;
+    return travelTime;
+  } catch (e) {
+    console.log(`error fetching directions: ${ e }`);
+    console.log(`error occured with input ${a} and ${b}`)
+  }
 }
 
 // yelp api call
