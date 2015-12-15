@@ -177,10 +177,6 @@ class RouteForm extends Component {
     } catch (e) {
       console.log(`error fetching directions: ${ e.stack }`);
     }
-    // console.log("hey!")
-    // console.log(this.refs.from.value);
-    // console.log(this.refs.to.value);
-    // console.log(this.refs.time.value);
   }
 
   render () {
@@ -310,7 +306,6 @@ class SimpleMap extends Component {
       }
     });
     this.setState({center});
-    // this.setState({zoom: 7});
     this.setZoom(7);
   }
 
@@ -409,15 +404,7 @@ async function toYelpReq (cord, q) {
   OAuth.setTimestampAndNonce(message);
   OAuth.SignatureMethod.sign(message, accessor);
   var parameterMap = OAuth.getParameterMap(message.parameters);
-  parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature)
-  // $.ajax({
-  //   'url': message.action,
-  //   'data': parameterMap,
-  //   'cache': true,
-  //   'dataType': 'jsonp',
-  //   'jsonpCallback': 'cb',
-  //   'success': callback
-  // });
+  parameterMap.oauth_signature = OAuth.percentEncode(parameterMap.oauth_signature);
   return message.action + "?" + $.param(parameterMap);
 
 }
