@@ -127,11 +127,11 @@ class RouteForm extends Component {
 
   async getWayPoint() {
     try {
-      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${this.state.from}&wp.1=${this.state.to}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath`));
+      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(this.state.from)}&wp.1=${encodeURIComponent(this.state.to)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2&ra=routepath`));
       var route = await response.json();
+      console.log(route);
       var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
       var timeLeft = this.refs.time.value * 60;
-      console.log(route);
       var waypoint = routeLegs.endLocation.geocodePoints.coordinates; //if timeLeft is more than total travel time
       await routeLegs.itineraryItems.every(function(path, index) {
         if(timeLeft < 0) {
@@ -335,7 +335,7 @@ class SimpleMap extends Component {
 
   // returns travel time by car in seconds
   async getTravelTime(a, b) {
-    var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${a}&wp.1=${b}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`;
+    var url = `http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${encodeURIComponent(a)}&wp.1=${encodeURIComponent(b)}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`;
     try {
       var response = await fetch(toYQL(url));
       var json = await response.json();
