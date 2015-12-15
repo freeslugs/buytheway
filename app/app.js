@@ -32,12 +32,15 @@ class List extends Component {
     super(props);
     this.state = {
       view: 0,
+      hideView: false,
       restaurantsList: []
     };
   }
 
   toggleMap() {
     //do stuff to hide the list and display map only
+    $("#list-wrapper").css("background-color", `rgba(255,255,255,${this.state.hideView ? 0.8 : 0})`); //better way of doing this?
+    this.setState({hideView: !this.state.hideView});
   }
 
   populateRestaurantsList(restaurantsList) {
@@ -60,7 +63,7 @@ class List extends Component {
     return (
       <div id="list-wrapper">
         <ListHeader view={this.state.view} toggleMap={this.toggleMap.bind(this)} goBack={this.goBack.bind(this)}/>
-        {content}
+        {this.state.hideView ? null : content}
       </div>
     );
   }
