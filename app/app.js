@@ -108,11 +108,12 @@ class RouteForm extends Component {
     super(props);
     this.state = {
       to: null,
-      from: null
+      from: null,
+      travelTime: 0
     };
   }
 
-  plotDirections() {
+  async plotDirections() {
     // if only one point exists, plot marker
     // if both points exist, plot directions
 
@@ -128,6 +129,8 @@ class RouteForm extends Component {
       this.props.plotMarker(from);
     }
     else if(to && from) {
+      var travelTime = await getTravelTime(from, to);
+      this.setState({travelTime});
       this.props.plotDirections(from, to);
     }
 
@@ -175,7 +178,8 @@ class RouteForm extends Component {
       var restaurantAddress = `${business.location.coordinate.latitude},${business.location.coordinate.longitude}`;
       var timeToRestaurant = await getTravelTime(this.state.from, restaurantAddress);
       var timeToDestination = await getTravelTime(restaurantAddress, this.state.to);
-      this.props.displayAddedTime(parseInt((parseInt(timeToRestaurant) + parseInt(timeToDestination) - parseInt(this.props.directions.routes[0].legs[0].duration.value))/60), index);
+      // var timeDirectlyToDestination = await getTravel(this.state.from, this.state.to);
+      this.props.displayAddedTime(parseInt((parseInt(timeToRestaurant) + parseInt(timeToDestination) - parseInt(this.state.travelTime))/60), index);
     } catch(e) {
       console.log(`error calculating added time: ${ e.stack }`);
     }
@@ -193,7 +197,7 @@ class RouteForm extends Component {
       // get waypoint
       waypoint = await this.getWayPoint();
       // generate yelp api request
-      yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, "restaurants");
+      yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, this.refs.query.value);
       // format yelp ==> yql and make request
       var response = await fetch(toYQL(yelpReq));
       var json = await response.json();
@@ -206,15 +210,8 @@ class RouteForm extends Component {
       this.props.populateRestaurantsList(json.query.results.json.businesses);
       json.query.results.json.businesses.forEach(async function(business, index) {
         this.props.plotMarker(business.location.coordinate, "restaurant.png");
-        // console.log(dist(waypoint.lat(), waypoint.lng(), business.location.coordinate.latitude, business.location.coordinate.longitude));
         await this.displayAddedTime(business, index);
       }, this);
-
-      // for(var business of json.query.results.json.businesses) {
-      //   this.props.plotMarker(business.location.coordinate, "restaurant.png");
-      //   // console.log(dist(waypoint.lat(), waypoint.lng(), business.location.coordinate.latitude, business.location.coordinate.longitude));
-      //   business.addedTime = await this.getAddedTime(business); //calculate added time to route
-      // }
     } catch (e) {
       console.log(`error fetching route: ${ e.stack }`);
     }
@@ -234,6 +231,10 @@ class RouteForm extends Component {
           <label className="item item-input">
             <i className="icon ion-clock placeholder-icon"></i>
             <input type="number" ref="time" min="1" placeholder="Minutes till you want to eat?"></input>
+          </label>
+          <label className="item item-input">
+            <i className="icon ion-pizza"></i>
+            <input type="text" ref="query" placeholder="What do you want to eat?"></input>
           </label>
           <button id="go" className="button button-full button-positive" onClick={this.submitRoute.bind(this)}>
             Let&#39;s Go!
