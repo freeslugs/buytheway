@@ -120,6 +120,32 @@ class RouteForm extends Component {
 
   }
 
+  async getWayPoint() {
+    try {
+      var response = await fetch(toYQL(`http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0=${this.state.from}&wp.1=${this.state.to}&key=AsxRw39EkmNBVgqP9Q5W9HKBN9_HzOIMYPWxcFUj4Ys8GluFcJgA6GUPD1YkNtG2`));
+      var route = await response.json();
+      var routeLegs = route.query.results.json.resourceSets.resources.routeLegs;
+      var timeLeft = this.refs.time.value * 60;
+      console.log(route);
+      var waypoint = routeLegs.endLocation.geocodePoints.coordinates; //if timeLeft is more than total travel time
+      await routeLegs.itineraryItems.every(function(path) {
+        if(timeLeft < 0) {
+          waypoint = path.maneuverPoint.coordinates;
+          return false;
+        } else {
+          timeLeft = timeLeft - path.travelDuration;
+          return true;
+        }
+      }, this);
+      console.log(waypoint);
+      return new google.maps.LatLng(waypoint[0], waypoint[1]);
+    } catch(e) {
+      console.log(`error fetching waypoint: ${ e.stack }`);
+    }
+
+
+  }
+
   async submitRoute(e) {
     // format url
     // make request
@@ -128,30 +154,8 @@ class RouteForm extends Component {
     e.preventDefault();
     try {
       var yelpReq, fYelpReq, waypoint;
-      var route = this.props.directions.routes[0].legs[0];
-
-      // tood: astract this -- fun function
-      var timeLeft = this.refs.time.value * 60;
-      var travelTime = 0;
-      route.steps.forEach(function(step) {
-        travelTime = travelTime + step.duration.value;
-      });
-      if(travelTime < timeLeft) {
-        waypoint = route.steps[route.steps.length - 1].end_location;
-      } else {
-        var stepNum = 0;
-        while(timeLeft > 0) {
-          timeLeft -= route.steps[stepNum].duration.value;
-          stepNum += 1;
-        }
-        waypoint = route.steps[stepNum].start_location;
-      }
-
-      // findWaypoint(route, timeLeft) {
-      //   //binary search of bing traffic route
-      //   return null;
-      // }
-
+      // get waypoint
+      waypoint = await this.getWayPoint();
       // generate yelp api request
       yelpReq = await toYelpReq(`${waypoint.lat()},${waypoint.lng()}`, "restaurants");
       // format yelp ==> yql
@@ -164,13 +168,14 @@ class RouteForm extends Component {
 
       this.props.clearMarkers();
       this.props.plotMarker(waypoint);
+      this.props.setZoom(12); //this isn't working?
       json.query.results.json.businesses.forEach(function(business) {
         this.props.plotMarker(business.location.coordinate);
       }, this);
-      this.props.setZoom(12);
+
       this.props.populateRestaurantsList(json.query.results.json.businesses);
     } catch (e) {
-      console.log(`error fetching directions: ${ e.stack }`)
+      console.log(`error fetching directions: ${ e.stack }`);
     }
     // console.log("hey!")
     // console.log(this.refs.from.value);
@@ -235,11 +240,11 @@ class SimpleMap extends Component {
   }
 
   async componentDidMount () {
-    var newYork = await this.geocodePoint("35 colby drive");
-    var b = `${newYork.pt.lat()},${newYork.pt.lng()}`;
-    var boston = await this.geocodePoint("las vegas ");
-    var a = `${boston.pt.lat()},${boston.pt.lng()}`;
-    var data = await this.getTravelTime(a,b);
+    // var newYork = await this.geocodePoint("35 colby drive");
+    // var b = `${newYork.pt.lat()},${newYork.pt.lng()}`;
+    // var boston = await this.geocodePoint("las vegas ");
+    // var a = `${boston.pt.lat()},${boston.pt.lng()}`;
+    // var data = await this.getTravelTime(a,b);
     // console.log(data);
   }
 
@@ -268,7 +273,7 @@ class SimpleMap extends Component {
   }
 
   setZoom(newzoom) {
-    this.setState({zoom: newzoom});
+    this.setState({zoom:newzoom});
   }
 
   clearMarkers() {
@@ -305,7 +310,8 @@ class SimpleMap extends Component {
       }
     });
     this.setState({center});
-    this.setState({zoom: 7})
+    // this.setState({zoom: 7});
+    this.setZoom(7);
   }
 
   // returns travel time by car in seconds
