@@ -179,7 +179,7 @@ class RouteForm extends Component {
       var timeToRestaurant = await getTravelTime(this.state.from, restaurantAddress);
       var timeToDestination = await getTravelTime(restaurantAddress, this.state.to);
       // var timeDirectlyToDestination = await getTravel(this.state.from, this.state.to);
-      this.props.displayAddedTime(parseInt((parseInt(timeToRestaurant) + parseInt(timeToDestination) - parseInt(this.state.travelTime))/60), index);
+      this.props.displayAddedTime((timeToRestaurant + timeToDestination - this.state.travelTime/60), index);
     } catch(e) {
       console.log(`error calculating added time: ${ e.stack }`);
     }

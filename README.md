@@ -26,6 +26,9 @@ find restaurants along your route
 ## code conventions
 - avoid callback hell. use promises, and if you're returning a value (such a geocode pt), use `async` and `await`.
 
+## development tools:
+- I recommend using Sublime and the [babel](https://github.com/babel/babel-sublime) library for syntax highlighting
+
 ## to-do
 - location after time
 - split app.js into different component files
